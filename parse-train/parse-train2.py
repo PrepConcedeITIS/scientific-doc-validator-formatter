@@ -12,31 +12,8 @@ from torchviz import make_dot
 import matplotlib.pyplot as plt
 import networkx as nx
 from pylatexenc.latexwalker import LatexWalker
-from TexSoup import TexSoup
+from TexSoup import TexSoup, TexNode
 
-
-# Функция для извлечения секций из TeX-документа с использование регулярных выражений
-def extract_sections_regex(tex_content):
-    sections = re.findall(r'\\section{(.*?)}', tex_content)  # Извлекаем заголовки
-    contents = re.split(r'\\section{.*?}', tex_content)[1:]  # Разбиваем по секциям
-    return list(zip(sections, contents))
-
-# Функция для извлечения секций из TeX-документа с использование библиотеки pylatexenc
-def extract_sections_lib(tex_content):
-    sections = {}
-    current_section = "Unknown"
-    buffer = []
-    for line in tex_content.split("\n"):
-        if line.startswith("\\section{"):
-            if buffer:
-                sections[current_section] = " ".join(buffer)
-                buffer = []
-            current_section = LatexNodes2Text().latex_to_text(line.strip().split("{")[1].split("}")[0])
-        else:
-            buffer.append(LatexNodes2Text().latex_to_text(line.strip()))
-    if buffer:
-        sections[current_section] = " ".join(buffer)
-    return list(sections.items())
 
 
 #### tests
@@ -46,20 +23,9 @@ file_content = ""
 with open(file_name, "r", encoding="utf-8") as f:
     file_content = f.read()
 
-
-
-#latexwalker = LatexWalker(file_content)
-#(nodelist, pos, len_) = latexwalker.get_latex_nodes(pos=0)
-
-#abstract = list(filter(lambda node: node.macroname == "abstract", nodelist))
-#abstract = [obj for obj in nodelist if getattr(obj, 'macroname', None) == 'abstract']
-#introduction = list(filter(lambda node: node.macroname == "section", nodelist))
-
-#(nodelist[0].macroname)
-
 standalone_block_names = ['title', 'abstract', 'author', 'email', 'shorttit', 'keywords', ]
-bibliography_block_name = 'thebibliography'
-section_block_names = ['Introduction', 'conclusion']
+bibliografy_block_name = 'thebibliography'
+section_block_names = ['introduction', 'conclusion']
 
 def extract_standalone(texsoup_item):
     result = {}
@@ -69,39 +35,18 @@ def extract_standalone(texsoup_item):
         if found is None:
             error_blocks.append(block)
         else:
+            #if getattr(found, 'contents', None) is not TexNode:
+            if isinstance(found, TexNode) == False or isinstance(getattr(found, 'contents', None), list) == False:
+                error_blocks.append(block)
+                continue
             block_content_buffer = ''.join(map(lambda x: str(x).replace('\n', ' '), found.contents))
             block_content_buffer = block_content_buffer.strip()
             result[block] = block_content_buffer
             #merge contents if obj is texnode
     return result, error_blocks
 
-def extract_bibliography(texsoup_item):
-    bibliography_block_name = 'thebibliography'
-    found = texsoup_item.find(bibliography_block_name)
-    return found
-
-
 texsoup = TexSoup(file_content)
-
-all_sections = texsoup.find_all("section")
-#file_content[all_sections[0].position: all_sections[1].position]
-sorted_sections = list(sorted(all_sections, key= lambda s: s.position))
-bibliography = texsoup.find(bibliography_block_name)
-
-sections_parsed = {};
-for i, section in enumerate(sorted_sections):
-    section_text_content = ''
-    if i == (len(sorted_sections)-1):
-        section_text_content = file_content[section.position: bibliography.position]
-    else:
-        section_text_content = file_content[section.position: sorted_sections[i+1].position]
-    sections_parsed[str(section.string).lower()] = section_text_content
-
-
-
-#bibliography = extract_bibliography(texsoup)
-standalone_extracts, errors = extract_standalone(texsoup)
-
+#standalone_extracts, errors = extract_standalone(texsoup)
 print(list(texsoup.find_all('abstract')))
 ######
 # Путь к папке с файлами
@@ -125,8 +70,9 @@ for path in file_paths:
                 with open(path, "r", encoding="cp1252") as f:
                     tex_content = f.read()
 
-        sections = extract_sections_lib(tex_content)
-        for title, content in sections:
+        texsoup = TexSoup(tex_content)
+        sections, _ = extract_standalone(texsoup)
+        for title, content in sections.items():
             data.append(content)
             labels.append(title)
     except Exception as e:
