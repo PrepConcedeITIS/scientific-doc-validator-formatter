@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from pylatexenc.latexwalker import LatexWalker
 from TexSoup import TexSoup
+from py_linq import Enumerable
 
 
 # Функция для извлечения секций из TeX-документа с использование регулярных выражений
@@ -97,7 +98,20 @@ for i, section in enumerate(sorted_sections):
         section_text_content = file_content[section.position: sorted_sections[i+1].position]
     sections_parsed[str(section.string).lower()] = section_text_content
 
+sections_parsed_trimmed = {}
+for i, (key, value) in enumerate(sections_parsed.items()):
+    parsed_section = TexSoup(value)
+    # items_to_be_merged_to_string = Enumerable(
+    #     parsed_section.all[1:]).select(
+    #     lambda item: str(item.string)).where(
+    #     lambda item: item != '' and item != 'None')
 
+    section_text_items = parsed_section.all[1:]
+    items_to_be_merged_to_string = list(
+        filter(lambda item: item.strip() != '',
+               map(lambda item: str(item), section_text_items)))
+    final_string = ''.join(items_to_be_merged_to_string)
+    sections_parsed_trimmed[key] = final_string
 
 #bibliography = extract_bibliography(texsoup)
 standalone_extracts, errors = extract_standalone(texsoup)
