@@ -26,7 +26,7 @@ def prepare_dataset_from_json(folder_path):
                 for label, content in sections.items():
                     if not content:
                         continue
-                    if label == "main_part" or label == "main_parts":
+                    if label == "doco:chapter" or label == "doco:chapters":
                         # Если это список, добавляем каждый элемент отдельно
                         if isinstance(content, list):
                             for part in content:

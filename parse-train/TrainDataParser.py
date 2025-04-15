@@ -48,7 +48,7 @@ def extract_sections(texsoup_item, tex_file_content):
 
     return sections_parsed_trimmed
 
-def extract_tex_to_json_object(tex_file_content, standalone_section_names, section_names):
+def extract_tex_to_json_object(tex_file_content, standalone_section_names, section_names, doco_names):
     texsoup_item = TexSoup(tex_file_content)
     standalone_extracts, errors = extract_standalone(texsoup_item, standalone_section_names)
     sections_extracts = extract_sections(texsoup_item, tex_file_content)
@@ -64,10 +64,10 @@ def extract_tex_to_json_object(tex_file_content, standalone_section_names, secti
     sections_result = {}
 
     for section_name in standalone_section_names:
-        sections_result[section_name] = standalone_extracts.get(section_name, '')
+        sections_result[doco_names[section_name]] = standalone_extracts.get(section_name, '')
     for section_name in section_names:
-        sections_result[section_name] = named_sections.get(section_name, '')
-    sections_result['main_part'] = main_parts
+        sections_result[doco_names[section_name]] = named_sections.get(section_name, '')
+    sections_result[doco_names['main_part']] = main_parts
 
     result = {'sections': sections_result, 'errors': errors}
 
@@ -82,6 +82,20 @@ def main():
     standalone_block_names = ['title', 'abstract', 'author', 'email', 'shorttit', 'keywords', ]
     bibliografy_block_name = 'thebibliography'
     section_block_names = ['introduction', 'conclusion', 'acknowledgements']
+
+    sections_in_doco_terminology = {
+        'title': 'doco:title',
+        'abstract': 'doco:abstract',
+        'author': 'doco:list_of_authors',
+        'email': 'doco:email',
+        'shorttit': 'doco:subtitle',
+        'keywords': 'doco:keywords',
+        'introduction': 'doco:introduction',
+        'conclusion': 'doco:conclusion',
+        'acknowledgements': 'doco:acknowledgements',
+        'thebibliography': 'doco:bibliography',
+        'main_part': 'doco:chapter'
+    }
 
     # Путь к папке с файлами
     tex_folder = "G:/UserData/Desktop/disser/TeX-collection-sections-fix/TeX-collection"
@@ -100,7 +114,7 @@ def main():
                 except UnicodeDecodeError:
                     with open(path, "r", encoding="cp1252") as f:
                         file_content = f.read()
-            parsed_sections_dict = extract_tex_to_json_object(file_content, standalone_block_names, section_block_names)
+            parsed_sections_dict = extract_tex_to_json_object(file_content, standalone_block_names, section_block_names, sections_in_doco_terminology)
             file_name = os.path.basename(path)
             export_parsed_sections_to_json(parsed_sections_dict, file_name, 'processed_tex')
         except Exception as e:
